@@ -128,7 +128,7 @@
   <!-- STEP 1 -->
   <div class="step" id="step1">
     <div class="step-h"><div class="step-n">1</div><div class="step-t">Pick your cards</div></div>
-    <div class="step-d">Choose up to 4 Singapore cards to compare — just pick from the list and each one is added. 14 cards built in; the list lives in one place in the code, easy to extend.</div>
+    <div class="step-d">Choose up to 4 Singapore cards to compare — just pick from the list and each one is added. 15 cards built in; the list lives in one place in the code, easy to extend.</div>
     <div class="row">
       <select id="cardSelect"></select>
     </div>
@@ -257,6 +257,11 @@ const CATALOG = [
 
   { id:"amex_truecashback", name:"Amex True Cashback", type:"cashback", accent:"#C2A083",
     earn:"1.5% flat on everything", bestFor:"Simple flat cashback",
+    capNote:"No cap, no minimum", expiry:"Cash, no expiry",
+    model:"flat", rates:{base:.015, fcy:.015} },
+
+  { id:"sc_simplycash", name:"Standard Chartered Simply Cash", type:"cashback", accent:"#7DA6A6",
+    earn:"1.5% flat on everything", bestFor:"No min, no cap — even insurance & rent count",
     capNote:"No cap, no minimum", expiry:"Cash, no expiry",
     model:"flat", rates:{base:.015, fcy:.015} },
 ];
