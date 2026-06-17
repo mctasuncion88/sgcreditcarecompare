@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Card Maximiser · Singapore miles vs cashback</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- PDF.js (UMD build) for reading statement PDFs entirely in the browser -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --ink:#34414F; --teal:#5E7C9E; --teal2:#88A4C0; --paper:#EBEFF4; --card:#FAFBFD;
+    --brass:#7C84B8; --green:#6E9A7E; --line:rgba(52,65,79,.13); --mut:#6B7787;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--paper);margin:0;
+    padding:26px clamp(14px,4vw,44px);line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto}
+  .disp{font-family:'Space Grotesk',sans-serif}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal)}
+  h1{font-family:'Space Grotesk';font-weight:700;font-size:clamp(26px,4.5vw,40px);line-height:1.04;letter-spacing:-.02em;margin:6px 0 0}
+  .sub{color:var(--mut);font-size:14px;max-width:64ch;margin-top:10px}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-top:18px}
+  .step.dim{opacity:.5;pointer-events:none}
+  .step-h{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+  .step-n{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-family:'IBM Plex Mono';
+    font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .step-t{font-family:'Space Grotesk';font-weight:600;font-size:16px}
+  .step-d{color:var(--mut);font-size:13px;margin:-8px 0 14px 37px}
+  /* selector */
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  select,input[type=text]{border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;font-family:'Inter';background:#fff;color:var(--ink)}
+  select{flex:1;min-width:200px;cursor:pointer}
+  .btn{border:none;border-radius:9px;background:var(--ink);color:#fff;font-weight:600;font-size:13px;
+    padding:10px 16px;cursor:pointer;font-family:'Inter'}
+  .btn:hover{background:var(--teal)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--paper)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+  .chip{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:8px 13px;font-size:13px;font-weight:500}
+  .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .chip .typ{font-family:'IBM Plex Mono';font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+  .chip .x{cursor:pointer;color:var(--mut);font-weight:700;border:none;background:none;font-size:15px;line-height:1;padding:0 1px}
+  .chip .x:hover{color:#b23}
+  .mut{color:var(--mut);font-size:12.5px}
+  .hint{color:var(--mut);font-size:12px;margin-top:10px}
+  /* comparison table */
+  .cmp-scroll{overflow-x:auto;margin-top:4px}
+  table.cmp{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+  .cmp th,.cmp td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  .cmp thead th{font-family:'Space Grotesk';font-size:13.5px;font-weight:600;border-bottom:2px solid var(--line)}
+  .cmp tbody th{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:500;white-space:nowrap;width:120px}
+  .badge{display:inline-block;font-family:'IBM Plex Mono';font-size:10px;font-weight:600;letter-spacing:.05em;
+    text-transform:uppercase;padding:3px 8px;border-radius:6px}
+  .badge.miles{background:rgba(124,132,184,.18);color:#4d5488}
+  .badge.cashback{background:rgba(110,154,126,.20);color:#3d6450}
+  /* upload */
+  .drop{border:1.5px dashed var(--line);border-radius:12px;padding:24px;text-align:center;background:#fff;cursor:pointer}
+  .drop:hover{border-color:var(--teal2);background:rgba(94,124,158,.05)}
+  .drop .big{font-family:'Space Grotesk';font-weight:600;font-size:15px}
+  .filelist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+  .fileitem{display:flex;align-items:center;gap:9px;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px}
+  .fileitem .ok{color:var(--green);font-weight:600}
+  .fileitem .err{color:#b2433a}
+  /* editable grid */
+  .grid-scroll{overflow-x:auto;margin-top:14px}
+  table.grid{border-collapse:collapse;font-size:12.5px;min-width:600px;width:100%}
+  .grid th,.grid td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+  .grid th:first-child,.grid td:first-child{text-align:left;font-weight:500}
+  .grid thead th{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:500}
+  .grid input{width:78px;border:1px solid transparent;border-radius:6px;padding:5px 6px;font-family:'IBM Plex Mono';
+    font-size:12.5px;text-align:right;background:var(--paper);color:var(--ink)}
+  .grid input:focus{outline:none;border-color:var(--teal2);background:#fff}
+  .grid tfoot td{font-family:'IBM Plex Mono';font-weight:600;border-top:2px solid var(--line)}
+  /* results */
+  .winner{background:linear-gradient(135deg,#3C4A5C,#5A6E88);color:#fff;border-radius:16px;padding:22px 24px;
+    display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+  .winner .lab{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#B6C4D6}
+  .winner .nm{font-family:'Space Grotesk';font-weight:700;font-size:28px;margin-top:5px}
+  .winner .vs{font-size:13px;color:#C5D0DE;margin-top:7px;max-width:46ch}
+  .winner .big{font-family:'IBM Plex Mono';font-weight:600;font-size:32px;text-align:right;line-height:1}
+  .winner .big small{display:block;font-size:12px;color:#B6C4D6;font-weight:400;margin-top:6px}
+  .bars{display:flex;flex-direction:column;gap:13px}
+  .bar-row{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}
+  .bar-meta{display:flex;flex-direction:column;gap:2px}
+  .bar-name{font-weight:600;font-size:14px;font-family:'Space Grotesk'}
+  .bar-unit{font-size:11px;color:var(--mut);font-family:'IBM Plex Mono'}
+  .track{position:relative;height:34px;background:var(--paper);border-radius:8px;border:1px solid var(--line);overflow:hidden}
+  .fill{height:100%;border-radius:7px 0 0 7px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;
+    transition:width .35s cubic-bezier(.4,0,.2,1)}
+  .fill span{font-family:'IBM Plex Mono';font-weight:600;font-size:13px;color:#fff;white-space:nowrap}
+  @media(max-width:620px){.bar-row{grid-template-columns:1fr}}
+  /* mile value toggle */
+  .toggle-wrap{margin:18px 0 4px}
+  .toggle-lab{font-size:13px;color:var(--mut);margin-bottom:9px}
+  .toggle{display:flex;gap:8px;flex-wrap:wrap}
+  .tg{flex:1;min-width:130px;border:1px solid var(--line);background:#fff;border-radius:11px;padding:11px 13px;cursor:pointer;text-align:left}
+  .tg.on{border-color:var(--ink);background:var(--ink);color:#fff}
+  .tg .tv{font-family:'IBM Plex Mono';font-weight:600;font-size:17px}
+  .tg .tn{font-size:11.5px;color:var(--mut);margin-top:2px}
+  .tg.on .tn{color:#C5D0DE}
+  /* trips */
+  .trips{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .trip{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;opacity:.55}
+  .trip.reach{opacity:1;border-color:rgba(94,124,158,.45);background:linear-gradient(90deg,rgba(94,124,158,.08),#fff)}
+  .trip .em{font-size:18px}
+  .trip-main{display:flex;flex-direction:column;gap:1px;flex:1}
+  .trip .city{font-weight:600;font-size:14px;font-family:'Space Grotesk'}
+  .trip .mi{font-size:11px;color:var(--mut);font-family:'IBM Plex Mono'}
+  .trip .when{font-size:12px;color:var(--teal);font-weight:500;font-family:'IBM Plex Mono';white-space:nowrap}
+  .trip:not(.reach) .when{color:var(--mut)}
+  .foot{font-size:11px;color:var(--mut);line-height:1.55;margin-top:14px}
+  .foot b{color:var(--ink)}
+  .section-note{font-size:13px;color:var(--mut);line-height:1.55;margin:0 0 12px}
+  .section-note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Singapore · miles vs cashback</div>
+  <h1 class="disp">Which card should<br/>carry your spending?</h1>
+  <p class="sub">Pick the cards you own, drop in your recent statements, and see exactly what each one earns on <b>your</b> actual spending — in miles or cashback. Everything runs in your browser; no data leaves your device.</p>
+
+  <!-- STEP 1 -->
+  <div class="step" id="step1">
+    <div class="step-h"><div class="step-n">1</div><div class="step-t">Pick your cards</div></div>
+    <div class="step-d">Choose up to 4 Singapore cards to compare — just pick from the list and each one is added. 14 cards built in; the list lives in one place in the code, easy to extend.</div>
+    <div class="row">
+      <select id="cardSelect"></select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="hint" id="cardHint"></div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step dim" id="step2">
+    <div class="step-h"><div class="step-n">2</div><div class="step-t">How they earn, side by side</div></div>
+    <div class="cmp-scroll"><table class="cmp" id="cmpTable"></table></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step dim" id="step3">
+    <div class="step-h"><div class="step-n">3</div><div class="step-t">Add your statements</div></div>
+    <div class="step-d">Upload up to 10 recent credit-card bills (PDF). They're read in your browser — nothing is uploaded anywhere. Or try the example data to see how it works.</div>
+    <div class="drop" id="drop">
+      <input type="file" id="fileInput" accept="application/pdf" multiple hidden/>
+      <div class="big">Drop PDF statements here, or click to choose</div>
+      <div class="mut" style="margin-top:6px">Up to 10 files · read locally</div>
+    </div>
+    <div class="filelist" id="fileList"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" id="sampleBtn">Try with example data</button>
+      <button class="btn ghost" id="clearData" style="display:none">Clear</button>
+    </div>
+    <div id="reviewWrap" style="display:none">
+      <div class="section-note" style="margin-top:18px">Here's what was read from your statements, grouped by month and category. <b>Edit any number</b> if something was miscategorised — the result updates live.</div>
+      <div class="grid-scroll"><table class="grid" id="reviewGrid"></table></div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step dim" id="step4">
+    <div class="step-h"><div class="step-n">4</div><div class="step-t">What each card earns on your spend</div></div>
+    <div id="results"></div>
+  </div>
+
+  <p class="foot">Estimates for comparison only — not financial advice. Card terms were verified against issuer pages in mid-2026 but change often; confirm anything important against your bank. Merchant categories are inferred from statement text, so check the grid in step 3. Bonus caps are applied per statement month. Miles figures are KrisFlyer-equivalent: all the miles cards here feed the same KrisFlyer account once converted (each conversion costs a small fee, so you batch transfers). Award-flight miles are typical Saver levels from Singapore and shift over time.</p>
+</div>
+
+<script>
+/* ============================================================
+   CARD CATALOG  —  edit / extend here.
+   All "miles" rates are KrisFlyer miles per S$1 (mpd).
+   Models:
+     flat       : per-category rate, falls back to rates.base; rates.fcy for foreign currency.
+                  optional minSpend + belowMinRate; optional capTiers [[spendThreshold, cashbackCap], ...] (highest first) for cashback.
+     bonus_cap  : bonusRate on eligible categories up to bonusSpendCap/month, baseRate on the rest.
+                  fcyEligible:true means foreign-currency spend also earns the bonus rate.
+   exclude: categories that earn nothing (e.g. insurance).
+   ============================================================ */
+const ONLINE   = ["online_shopping","subscriptions","travel"];
+const BROAD     = ["dining","groceries","transport","online_shopping","subscriptions","travel","retail","pharmacy","other"];
+
+const CATALOG = [
+  /* ---------------------------- MILES ---------------------------- */
+  { id:"dbs_altitude", name:"DBS Altitude Visa", type:"miles", accent:"#7E96B0",
+    earn:"1.3 mpd local · 2.2 mpd overseas", bestFor:"Simple, uncapped, overseas spend",
+    capNote:"No cap, no minimum", expiry:"Points never expire",
+    model:"flat", rates:{base:1.3, fcy:2.2}, exclude:["insurance"] },
+
+  { id:"hsbc_revolution", name:"HSBC Revolution", type:"miles", accent:"#8E9DCC",
+    earn:"4 mpd online & contactless · 0.4 after", bestFor:"Everyday online + tap-to-pay",
+    capNote:"4 mpd on first S$1,000/mo", expiry:"Points last ~37 months",
+    model:"bonus_cap", bonusRate:4, baseRate:0.4, bonusSpendCap:1000, eligible:BROAD, fcyEligible:true, exclude:["insurance"] },
+
+  { id:"citi_premiermiles", name:"Citi PremierMiles", type:"miles", accent:"#6E89A8",
+    earn:"1.2 mpd local · 2.2 mpd overseas", bestFor:"Flexible transfers, no expiry",
+    capNote:"No cap, no minimum", expiry:"Citi Miles never expire",
+    model:"flat", rates:{base:1.2, fcy:2.2}, exclude:["insurance"] },
+
+  { id:"uob_prvi", name:"UOB PRVI Miles", type:"miles", accent:"#86B2BE",
+    earn:"1.4 mpd local · 2.4 mpd overseas", bestFor:"Highest uncapped everyday earn",
+    capNote:"No cap, no minimum", expiry:"UNI$ last 2 years",
+    model:"flat", rates:{base:1.4, fcy:2.4}, exclude:["insurance"] },
+
+  { id:"hsbc_travelone", name:"HSBC TravelOne", type:"miles", accent:"#7FB0AC",
+    earn:"1.2 mpd local · 2.4 mpd overseas", bestFor:"Wide transfer choice + lounge",
+    capNote:"No cap, no minimum", expiry:"Points last ~37 months",
+    model:"flat", rates:{base:1.2, fcy:2.4}, exclude:["insurance"] },
+
+  { id:"sc_journey", name:"Standard Chartered Journey", type:"miles", accent:"#88AEC4",
+    earn:"3 mpd online transport/grocery/delivery · 1.2 local · 2.0 overseas", bestFor:"Ride-hailing, food delivery, online groceries",
+    capNote:"3 mpd on first S$1,000/mo (those categories)", expiry:"Points never expire",
+    model:"bonus_cap", bonusRate:3, baseRate:1.2, bonusSpendCap:1000, eligible:["transport","groceries"], fcyEligible:false, fcyRate:2.0, exclude:["insurance"] },
+
+  { id:"uob_krisflyer", name:"UOB KrisFlyer", type:"miles", accent:"#A88FB8",
+    earn:"2.4 mpd dining/online/transport*", bestFor:"SIA flyers (miles straight to KrisFlyer)",
+    capNote:"Needs S$1,000/yr SIA·Scoot spend to unlock*", expiry:"KrisFlyer miles, 3 years", approx:true,
+    model:"flat", rates:{dining:2.4, online_shopping:2.4, transport:2.4, travel:2.4, base:1.2, fcy:1.2}, exclude:["insurance"] },
+
+  { id:"dbs_wwmc", name:"DBS Woman's World", type:"miles", accent:"#C99AB0",
+    earn:"4 mpd online · 0.4 mpd offline", bestFor:"Heavy online shoppers",
+    capNote:"4 mpd on first S$1,000/mo online", expiry:"Points expire in 1 year",
+    model:"bonus_cap", bonusRate:4, baseRate:0.4, bonusSpendCap:1000, eligible:ONLINE, fcyEligible:true, exclude:["insurance"] },
+
+  { id:"citi_rewards", name:"Citi Rewards", type:"miles", accent:"#9A8FC0",
+    earn:"4 mpd online & retail shops · 0.4 after", bestFor:"Online retail (travel doesn't count)",
+    capNote:"4 mpd on first S$1,000/mo · travel excluded", expiry:"Points last 5 years",
+    model:"bonus_cap", bonusRate:4, baseRate:0.4, bonusSpendCap:1000, eligible:["online_shopping","retail"], fcyEligible:false, fcyRate:0.4, exclude:["insurance"] },
+
+  /* ---------------------------- CASHBACK ---------------------------- */
+  { id:"ocbc_365", name:"OCBC 365", type:"cashback", accent:"#8FB39A",
+    earn:"5% dining · 3% groceries/transport · 0.25% rest", bestFor:"Dining & groceries spenders",
+    capNote:"Needs S$800/mo · cap S$80 (S$160 if S$1,600+)", expiry:"Cash, no expiry",
+    model:"flat", rates:{dining:.05, groceries:.03, transport:.03, pharmacy:.03, subscriptions:.03, travel:.03, base:.0025, fcy:.0025},
+    minSpend:800, belowMinRate:.0025, capTiers:[[1600,160],[800,80]], exclude:["insurance"] },
+
+  { id:"citi_cashback", name:"Citi Cash Back", type:"cashback", accent:"#9CB88A",
+    earn:"6% dining & groceries · 8% petrol/commute · 0.2% rest", bestFor:"Dining + groceries, if you stay under cap",
+    capNote:"Needs S$800/mo · cap S$80", expiry:"Cash, no expiry",
+    model:"flat", rates:{dining:.06, groceries:.06, transport:.06, base:.002, fcy:.002},
+    minSpend:800, belowMinRate:.002, capTiers:[[800,80]], exclude:["insurance"] },
+
+  { id:"uob_one", name:"UOB One", type:"cashback", accent:"#B7C58A",
+    earn:"≈3.3% on spend (simplified)", bestFor:"Steady S$2,000+/mo spenders",
+    capNote:"Needs ~S$2,000/mo · approximate model", expiry:"Cash, no expiry", approx:true,
+    model:"flat", rates:{base:.0333, fcy:.003}, minSpend:2000, belowMinRate:.003, capTiers:[[2000,66.67]], exclude:["insurance"] },
+
+  { id:"uob_absolute", name:"UOB Absolute Cashback", type:"cashback", accent:"#7FA88E",
+    earn:"1.7% flat on everything", bestFor:"Fuss-free — no caps, no exclusions",
+    capNote:"No cap, no minimum", expiry:"Cash, no expiry",
+    model:"flat", rates:{base:.017, fcy:.017} },
+
+  { id:"amex_truecashback", name:"Amex True Cashback", type:"cashback", accent:"#C2A083",
+    earn:"1.5% flat on everything", bestFor:"Simple flat cashback",
+    capNote:"No cap, no minimum", expiry:"Cash, no expiry",
+    model:"flat", rates:{base:.015, fcy:.015} },
+];
+
+/* round-trip Saver Economy KrisFlyer miles from Singapore (typical, mid-2026) */
+const TRIPS = [
+  {city:"Bali or Kuala Lumpur", miles:16000, emoji:"🏝️"},
+  {city:"Bangkok",              miles:26000, emoji:"🍜"},
+  {city:"Bali, Business class",  miles:44000, emoji:"🥂"},
+  {city:"Tokyo or Seoul",        miles:51000, emoji:"🗼"},
+  {city:"Sydney",                miles:58000, emoji:"🦘"},
+  {city:"London",                miles:88000, emoji:"🇬🇧"},
+];
+
+const CATS = ["dining","groceries","transport","online_shopping","subscriptions","travel","fcy","retail","pharmacy","medical","insurance","other"];
+const CAT_LABEL = {dining:"Dining", groceries:"Groceries", transport:"Transport", online_shopping:"Online shopping",
+  subscriptions:"Subscriptions", travel:"Travel (local)", fcy:"Overseas (foreign currency)", retail:"Retail/shops",
+  pharmacy:"Pharmacy", medical:"Medical", insurance:"Insurance", other:"Other"};
+
+const MILE_VALUES = [
+  {key:"cash", label:"Cash out", val:0.8, note:"KrisPay / rebate"},
+  {key:"econ", label:"Economy flights", val:1.5, note:"typical redemption"},
+  {key:"biz",  label:"Business flights", val:3.0, note:"premium-cabin sweet spot"},
+];
+
+/* ---- merchant categoriser (best-effort keyword rules) ---- */
+const RULES = [
+  [/GRAB|GOJEK|GOPAY|TADA|COMFORT|CDG|RYDE/, "transport"],
+  [/BUS\/MRT|SIMPLYGO|SMRT|TRANSITLINK|EZ-LINK|EZLINK/, "transport"],
+  [/SHOPEE|AMAZON|LAZADA|QOO10|TAOBAO|ALIEXPRESS|EZBUY/, "online_shopping"],
+  [/APPLE\.COM|SPOTIFY|NETFLIX|DISNEY|YOUTUBE|MYREPUBLIC|GOOGLE|MICROSOFT|ANTHROPIC|CLAUDE|OPENAI|ADOBE|NOTION|CANVA|SINGTEL|STARHUB|M1/, "subscriptions"],
+  [/NTUC|FAIRPRICE|7-ELEVEN|DONKI|DON DON|MEIDI-YA|LITTLE FARMS|THAI SUPERMARKET|SHENG SIONG|COLD STORAGE|GIANT|PRIME SUPER|MUSTAFA|MARKET PLACE/, "groceries"],
+  [/WATSONS|GUARDIAN|WELCIA|UNITY|PHARMACY/, "pharmacy"],
+  [/DENTAL|CLINIC|MEDICAL|HOSPITAL|Q&M|AESTHET|SKIN|DERMA|HEALTH|DOCTOR|POLYCLINIC/, "medical"],
+  [/PRUDENTIAL|\bAIA\b|GREAT EASTERN|INCOME INSUR|MANULIFE|INSURANCE|NTUC INCOME/, "insurance"],
+  [/BOOKING\.COM|TRIP\.COM|AGODA|EXPEDIA|AIRBNB|HOTEL|KLOOK|AIRASIA|SCOOT|SINGAPORE AIR|JETSTAR|EMIRATES|QATAR|CATHAY|ALHAMBRA|TICKETS/, "travel"],
+  [/CAFE|KOPITIAM|BAKERY|RESTAURANT|\bTEA\b|COFFEE|BBQ|BISTRO|EATERY|FOOD|DINER|PIZZA|RAMEN|SUSHI|BHAVAN|SAPTAGIRI|MCDONALD|KFC|BURGER|STARBUCKS|TOAST|HAWKER|NOODLE|CHICKEN|GONG CHA|CHAGEE|LIHO|KOI/, "dining"],
+  [/UNIQLO|SEPHORA|MUJI|NITORI|DAISO|MANGO|KIEHL|INNISFREE|FOSSIL|MARKS|TAKASHIMAYA|COSMETIC|BEAUTY|ZARA|H&M|IKEA|DECATHLON|CHALLENGER|COURTS|HARVEY|VENUS|KIEHLS|ANOTHERSOLE|SPACE23/, "retail"],
+  [/GIVE\.ASIA|GIVING|CHARITY|DONATION/, "other"],
+];
+const FCY_TOKENS = /\bUSD\b|\bEUR\b|\bGBP\b|\bJPY\b|\bYEN\b|\bAUD\b|\bTHB\b|\bMYR\b|\bIDR\b|\bHKD\b|\bKRW\b|\bCNY\b|\bVND\b|\bPHP\b|RUPIAH|RINGGIT|BAHT|PESO|DOLLAR|FOREIGN CURRENCY|RMB/;
+function categorize(desc){
+  const d = desc.toUpperCase();
+  for(const [re,cat] of RULES) if(re.test(d)) return cat;
+  return "other";
+}
+
+/* ============================ ENGINE ============================ */
+// monthData: { dining: amt, groceries: amt, ..., fcy: amt }
+function computeMonth(card, m){
+  const cats = Object.keys(m);
+  const total = cats.reduce((s,c)=>s+(m[c]||0), 0);
+  if(card.model === "flat"){
+    let out = 0;
+    for(const c of cats){
+      if(card.exclude && card.exclude.includes(c)) continue;
+      let r;
+      if(card.minSpend && total < card.minSpend) r = card.belowMinRate;
+      else if(c === "fcy") r = (card.rates.fcy != null ? card.rates.fcy : card.rates.base);
+      else r = (card.rates[c] != null ? card.rates[c] : card.rates.base);
+      out += m[c] * r;
+    }
+    if(card.capTiers){
+      let cap = Infinity;
+      for(const [t, cp] of card.capTiers){ if(total >= t){ cap = cp; break; } }
+      out = Math.min(out, cap);
+    }
+    return out;
+  }
+  // bonus_cap
+  let elig = 0, rest = 0, fcyAmt = 0;
+  for(const c of cats){
+    if(card.exclude && card.exclude.includes(c)) continue;
+    if(c === "fcy"){
+      if(card.fcyEligible) elig += m[c]; else fcyAmt += m[c];
+    } else if(card.eligible.includes(c)) elig += m[c];
+    else rest += m[c];
+  }
+  const bonus = Math.min(elig, card.bonusSpendCap);
+  const fcyRate = (card.fcyRate != null ? card.fcyRate : card.baseRate);
+  return bonus * card.bonusRate + (elig - bonus + rest) * card.baseRate + fcyAmt * fcyRate;
+}
+function computeCard(card, data){
+  const months = Object.keys(data);
+  let total = 0; const perMonth = {};
+  for(const mo of months){ const v = computeMonth(card, data[mo]); perMonth[mo] = v; total += v; }
+  return { total, perMonth, months };
+}
+
+/* ============================ STATE ============================ */
+const state = {
+  selected: [],          // array of card ids
+  data: null,            // { "Apr": {dining:.., ...}, ... }  OR null
+  mileValueKey: "econ",
+  files: [],
+};
+
+/* Illustrative spend for a typical Singaporean cardholder (~S$2,000/month).
+   Synthetic figures with realistic category proportions — not anyone's real data.
+   Month 2 includes an overseas trip to show how foreign-currency spend shifts the result. */
+const EXAMPLE_DATA = {
+  Jan:{dining:460, groceries:300, transport:150, online_shopping:220, subscriptions:50, travel:0,   fcy:0,   retail:260, pharmacy:50, medical:0,   insurance:80, other:130},
+  Feb:{dining:400, groceries:260, transport:130, online_shopping:250, subscriptions:50, travel:180, fcy:600, retail:220, pharmacy:40, medical:0,   insurance:80, other:110},
+  Mar:{dining:500, groceries:320, transport:160, online_shopping:180, subscriptions:50, travel:0,   fcy:0,   retail:290, pharmacy:60, medical:220, insurance:80, other:140},
+};
+
+/* ============================ HELPERS ============================ */
+const $ = id => document.getElementById(id);
+const fmt = (n,d=0) => Number(n).toLocaleString("en-SG",{minimumFractionDigits:d, maximumFractionDigits:d});
+const sgd = n => "S$" + Number(n).toLocaleString("en-SG",{minimumFractionDigits:2, maximumFractionDigits:2});
+const cardById = id => CATALOG.find(c => c.id === id);
+const mileVal = () => MILE_VALUES.find(v => v.key === state.mileValueKey).val;
+
+/* ============================ RENDER: STEP 1 ============================ */
+function renderSelect(){
+  const sel = $("cardSelect");
+  const full = state.selected.length >= 4;
+  const available = CATALOG.filter(c => !state.selected.includes(c.id));
+  if(full){
+    sel.innerHTML = '<option value="">Maximum 4 cards — remove one to add another</option>';
+    sel.disabled = true;
+  } else if(available.length === 0){
+    sel.innerHTML = '<option value="">All cards added</option>';
+    sel.disabled = true;
+  } else {
+    sel.innerHTML = '<option value="">+ Add a card to compare…</option>' +
+      available.map(c => `<option value="${c.id}">${c.name} — ${c.type}</option>`).join("");
+    sel.disabled = false;
+  }
+}
+function renderChips(){
+  const wrap = $("chips");
+  wrap.innerHTML = state.selected.map(id => {
+    const c = cardById(id);
+    return `<span class="chip"><span class="dot" style="background:${c.accent}"></span>${c.name}
+      <span class="typ">${c.type}</span>
+      <button class="x" data-rm="${id}">×</button></span>`;
+  }).join("");
+  wrap.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => removeCard(b.dataset.rm));
+  $("cardHint").textContent = state.selected.length >= 4
+    ? "Maximum of 4 cards reached — remove one to swap."
+    : (state.selected.length ? `${state.selected.length} of 4 selected.` : "");
+}
+function addCardById(id){
+  if(!id || state.selected.includes(id) || state.selected.length >= 4) return;
+  state.selected.push(id);
+  refresh();
+}
+function removeCard(id){
+  state.selected = state.selected.filter(x => x !== id);
+  refresh();
+}
+
+/* ============================ RENDER: STEP 2 ============================ */
+function renderComparison(){
+  const step = $("step2"), table = $("cmpTable");
+  if(state.selected.length === 0){ step.classList.add("dim"); table.innerHTML = ""; return; }
+  step.classList.remove("dim");
+  const cards = state.selected.map(cardById);
+  const rows = [
+    ["Type",      c => `<span class="badge ${c.type}">${c.type}</span>`],
+    ["Earns",     c => c.earn],
+    ["Best for",  c => c.bestFor],
+    ["Cap / min", c => c.capNote],
+    ["Expiry",    c => c.expiry],
+  ];
+  let html = "<thead><tr><th></th>" + cards.map(c =>
+    `<th><span class="dot" style="background:${c.accent};display:inline-block;margin-right:6px"></span>${c.name}${c.approx?' <span class="mut">*</span>':''}</th>`).join("") + "</tr></thead><tbody>";
+  for(const [label, fn] of rows){
+    html += `<tr><th>${label}</th>` + cards.map(c => `<td>${fn(c)}</td>`).join("") + "</tr>";
+  }
+  html += "</tbody>";
+  table.innerHTML = html;
+}
+
+/* ============================ STEP 3: UPLOAD + PARSE ============================ */
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+async function pdfToLines(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const lines = [];
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const rows = {};
+    for(const it of tc.items){
+      if(!it.str || !it.str.trim()) continue;
+      const y = Math.round(it.transform[5]);
+      (rows[y] = rows[y] || []).push([it.transform[4], it.str]);
+    }
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y => {
+      const line = rows[y].sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(" ").replace(/\s+/g," ").trim();
+      if(line) lines.push(line);
+    });
+  }
+  return lines;
+}
+
+// parse statement lines into a single month->category map (a statement may span 1-2 month labels)
+const TXN_RE = /(?:^|\s)(\d{1,2})\s+([A-Za-z]{3})\s+(.+?)\s+([\d,]+\.\d{2})(\s*CR)?\s*$/;
+const SKIP_RE = /PREVIOUS BALANCE|BILL PAYMENT|SUB-TOTAL|GRAND TOTAL|TOTAL|PAYMENT DUE|CREDIT LIMIT|MINIMUM|BALANCE|CARD NO|STATEMENT|GST|ANNUAL FEE|INTEREST|LATE|REWARD/i;
+
+function parseLines(lines){
+  const out = {}; // month -> {cat: amt}
+  function add(mon, cat, amt){
+    if(!out[mon]) out[mon] = Object.fromEntries(CATS.map(c=>[c,0]));
+    out[mon][cat] += amt;
+  }
+  for(let i=0;i<lines.length;i++){
+    const ln = lines[i];
+    if(SKIP_RE.test(ln)) continue;
+    const m = ln.match(TXN_RE);
+    if(!m) continue;
+    const monRaw = m[2]; const mon = monRaw.charAt(0).toUpperCase() + monRaw.slice(1,3).toLowerCase();
+    if(!/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/.test(mon)) continue;
+    const desc = m[3].trim();
+    let amt = parseFloat(m[4].replace(/,/g,""));
+    if(m[5]) amt = -amt; // CR = refund
+    let cat = categorize(desc);
+    const fcy = FCY_TOKENS.test(ln) || FCY_TOKENS.test(lines[i+1]||"");
+    if(fcy) cat = "fcy";
+    add(mon, cat, amt);
+  }
+  // round
+  for(const mo in out) for(const c in out[mo]) out[mo][c] = Math.round(out[mo][c]*100)/100;
+  return out;
+}
+
+function mergeData(target, src){
+  for(const mo in src){
+    if(!target[mo]) target[mo] = Object.fromEntries(CATS.map(c=>[c,0]));
+    for(const c in src[mo]) target[mo][c] += src[mo][c];
+  }
+  return target;
+}
+
+async function handleFiles(fileList){
+  const files = Array.from(fileList).slice(0, 10);
+  const listEl = $("fileList");
+  let merged = state.data && !state._sample ? state.data : {};
+  if(state._sample){ merged = {}; state._sample = false; }
+  for(const f of files){
+    const item = document.createElement("div");
+    item.className = "fileitem";
+    item.innerHTML = `<span>📄</span><span style="flex:1">${f.name}</span><span class="mut">reading…</span>`;
+    listEl.appendChild(item);
+    try{
+      const lines = await pdfToLines(f);
+      const parsed = parseLines(lines);
+      const nTxn = Object.values(parsed).reduce((s,m)=>s+Object.values(m).filter(v=>v!==0).length,0);
+      const nMon = Object.keys(parsed).length;
+      if(nMon === 0){
+        item.querySelector(".mut").outerHTML = '<span class="err">no transactions found — edit grid below</span>';
+      } else {
+        mergeData(merged, parsed);
+        item.querySelector(".mut").outerHTML = `<span class="ok">${nMon} month(s), ${nTxn} categories</span>`;
+      }
+    }catch(err){
+      item.querySelector(".mut").outerHTML = '<span class="err">couldn\'t read this PDF</span>';
+    }
+  }
+  if(Object.keys(merged).length){ state.data = merged; refresh(); }
+}
+
+function monthOrder(a,b){
+  const O = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return O.indexOf(a) - O.indexOf(b);
+}
+
+/* editable review grid */
+function renderReview(){
+  const wrap = $("reviewWrap"), grid = $("reviewGrid");
+  if(!state.data){ wrap.style.display = "none"; $("clearData").style.display="none"; return; }
+  wrap.style.display = "block";
+  $("clearData").style.display = "inline-block";
+  const months = Object.keys(state.data).sort(monthOrder);
+  let html = "<thead><tr><th>Category</th>" + months.map(mo=>`<th>${mo}</th>`).join("") + "</tr></thead><tbody>";
+  for(const c of CATS){
+    html += `<tr><td>${CAT_LABEL[c]}</td>` + months.map(mo => {
+      const v = state.data[mo][c] || 0;
+      return `<td><input type="number" step="0.01" data-mo="${mo}" data-cat="${c}" value="${v.toFixed(2)}"/></td>`;
+    }).join("") + "</tr>";
+  }
+  html += "</tbody><tfoot><tr><td>Total</td>" + months.map(mo => {
+    const t = CATS.reduce((s,c)=>s+(state.data[mo][c]||0),0);
+    return `<td>${sgd(t)}</td>`;
+  }).join("") + "</tr></tfoot>";
+  grid.innerHTML = html;
+  grid.querySelectorAll("input").forEach(inp => {
+    inp.onchange = () => {
+      state.data[inp.dataset.mo][inp.dataset.cat] = parseFloat(inp.value) || 0;
+      renderResults();
+      // update totals row
+      renderReviewTotals();
+    };
+  });
+}
+function renderReviewTotals(){
+  const grid = $("reviewGrid");
+  const months = Object.keys(state.data).sort(monthOrder);
+  const tds = grid.querySelectorAll("tfoot td");
+  months.forEach((mo,i) => {
+    const t = CATS.reduce((s,c)=>s+(state.data[mo][c]||0),0);
+    tds[i+1].textContent = sgd(t);
+  });
+}
+
+/* ============================ STEP 4: RESULTS ============================ */
+function renderMileToggle(){
+  return `<div class="toggle-wrap">
+    <div class="toggle-lab">A mile is only worth what you redeem it for. How do you fly?</div>
+    <div class="toggle">${MILE_VALUES.map(v =>
+      `<div class="tg ${state.mileValueKey===v.key?'on':''}" data-mv="${v.key}">
+        <div class="tv">${v.val.toFixed(1)}¢ <span style="font-size:12px;font-weight:500">/ mile</span></div>
+        <div class="tn">${v.label} — ${v.note}</div>
+      </div>`).join("")}</div>
+  </div>`;
+}
+
+function renderResults(){
+  const step = $("step4"), box = $("results");
+  if(state.selected.length === 0 || !state.data){
+    step.classList.add("dim");
+    box.innerHTML = '<div class="mut">Pick at least one card and add a statement (or try the example data) to see results.</div>';
+    return;
+  }
+  step.classList.remove("dim");
+
+  const months = Object.keys(state.data).sort(monthOrder);
+  const nMonths = months.length;
+  const mv = mileVal();
+
+  const results = state.selected.map(id => {
+    const c = cardById(id);
+    const { total, perMonth } = computeCard(c, state.data);
+    const sgdVal = c.type === "cashback" ? total : total * mv / 100;
+    return { ...c, total, perMonth, sgdVal };
+  }).sort((a,b) => b.sgdVal - a.sgdVal);
+
+  const maxSgd = Math.max(...results.map(r=>r.sgdVal), 0.01);
+  const win = results[0];
+  const topMiles = results.filter(r=>r.type==="miles").sort((a,b)=>b.total-a.total)[0];
+
+  let html = "";
+
+  // winner banner
+  html += `<div class="winner">
+    <div>
+      <div class="lab">Best on your spend · ${MILE_VALUES.find(v=>v.key===state.mileValueKey).label.toLowerCase()} value</div>
+      <div class="nm disp">${win.name}</div>
+      <div class="vs">${win.earn}</div>
+    </div>
+    <div class="big">${win.type==="cashback"? sgd(win.total) : sgd(win.sgdVal)}
+      <small>${win.type==="cashback"? "cashback over "+nMonths+" mo" : fmt(win.total)+" miles over "+nMonths+" mo"}</small>
+    </div>
+  </div>`;
+
+  // bars
+  html += `<div class="bars">` + results.map((c,i) => `
+    <div class="bar-row">
+      <div class="bar-meta">
+        <span class="bar-name">${i===0?"▸ ":""}${c.name}</span>
+        <span class="bar-unit">${c.type==="cashback"? sgd(c.total)+" cash" : fmt(c.total)+" miles"}</span>
+      </div>
+      <div class="track"><div class="fill" style="width:${Math.max(7,c.sgdVal/maxSgd*100)}%;background:${c.accent}">
+        <span>${sgd(c.sgdVal)}</span></div></div>
+    </div>`).join("") + `</div>`;
+
+  html += `<div class="foot">Bars put everything in one currency — SGD. Cashback is real money; miles are converted at the value you pick below. Over ${nMonths} month(s) you spent ${sgd(months.reduce((s,mo)=>s+CATS.reduce((t,c)=>t+(state.data[mo][c]||0),0),0))} in total.</div>`;
+
+  // mile value toggle (only matters if a miles card is present)
+  if(results.some(r=>r.type==="miles")) html += renderMileToggle();
+
+  // trips
+  if(topMiles){
+    const perMo = topMiles.total / nMonths;
+    const perYr = perMo * 12;
+    html += `<div style="margin-top:22px">
+      <div class="step-t" style="font-size:15px;margin-bottom:6px">What those miles actually buy — from Singapore</div>
+      <div class="section-note">On <b>${topMiles.name}</b> you're earning about <b>${fmt(Math.round(perMo))} miles a month</b> — roughly <b>${fmt(Math.round(perYr))} a year</b>. Here's how that becomes real Singapore Airlines trips (round-trip, Economy Saver):</div>
+      <div class="trips">` + TRIPS.map(t => {
+        const mo = t.miles / perMo;
+        const reach = perYr >= t.miles;
+        const when = mo <= 12 ? `≈ ${mo<1?"<1":Math.round(mo)} mo of spend` : `≈ ${(mo/12).toFixed(1)} yr`;
+        return `<div class="trip ${reach?'reach':''}">
+          <span class="em">${t.emoji}</span>
+          <div class="trip-main"><span class="city">${t.city}</span><span class="mi">${fmt(t.miles)} miles</span></div>
+          <span class="when">${when}</span>
+        </div>`;
+      }).join("") + `</div>
+      <div class="foot">Highlighted trips are within a year of your current spending. Economy hops to Bali or KL come quickest; business-class is where each mile is worth most (the 3¢ setting), which is why miles-chasers save for premium cabins.</div>
+    </div>`;
+  }
+
+  if(results.some(r=>r.approx)) html += `<div class="foot">* UOB One's real rewards are quarterly-tiered and promo-heavy; it's modelled here as a simplified flat rebate, so treat its figure as a rough guide.</div>`;
+
+  box.innerHTML = html;
+
+  box.querySelectorAll("[data-mv]").forEach(el => el.onclick = () => { state.mileValueKey = el.dataset.mv; renderResults(); });
+}
+
+/* ============================ WIRING ============================ */
+function refresh(){
+  renderSelect();
+  renderChips();
+  renderComparison();
+  // enable/disable step 3
+  $("step3").classList.toggle("dim", state.selected.length === 0);
+  renderReview();
+  renderResults();
+}
+
+$("cardSelect").onchange = e => { const id = e.target.value; if(id) addCardById(id); };
+$("fileInput").onchange = e => handleFiles(e.target.files);
+$("drop").onclick = () => $("fileInput").click();
+$("drop").ondragover = e => { e.preventDefault(); };
+$("drop").ondrop = e => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
+$("sampleBtn").onclick = () => {
+  state.data = JSON.parse(JSON.stringify(EXAMPLE_DATA));
+  state._sample = true;
+  $("fileList").innerHTML = '<div class="fileitem"><span>✨</span><span style="flex:1">Example: a typical Singaporean\'s 3 months (~S$2,000/mo)</span><span class="ok">loaded</span></div>';
+  refresh();
+};
+$("clearData").onclick = () => {
+  state.data = null; state._sample = false; state.files = [];
+  $("fileList").innerHTML = ""; $("fileInput").value = "";
+  refresh();
+};
+
+// init
+refresh();
+</script>
+</body>
+</html>
